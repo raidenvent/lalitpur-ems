@@ -1,0 +1,396 @@
+.counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.hero {
+  position: relative;
+
+  .base,
+  .framework,
+  .vite {
+    inset-inline: 0;
+    margin: 0 auto;
+  }
+
+  .base {
+    width: 170px;
+    position: relative;
+    z-index: 0;
+  }
+
+  .framework,
+  .vite {
+    position: absolute;
+  }
+
+  .framework {
+    z-index: 1;
+    top: 34px;
+    height: 28px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
+      scale(1.4);
+  }
+
+  .vite {
+    z-index: 0;
+    top: 107px;
+    height: 26px;
+    width: auto;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
+      scale(0.8);
+  }
+}
+
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+  flex-grow: 1;
+
+  @media (max-width: 1024px) {
+    padding: 32px 20px 24px;
+    gap: 18px;
+  }
+}
+
+#next-steps {
+  display: flex;
+  border-top: 1px solid var(--border);
+  text-align: left;
+
+  & > div {
+    flex: 1 1 0;
+    padding: 32px;
+    @media (max-width: 1024px) {
+      padding: 24px 20px;
+    }
+  }
+
+  .icon {
+    margin-bottom: 16px;
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+#docs {
+  border-right: 1px solid var(--border);
+
+  @media (max-width: 1024px) {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+#next-steps ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  margin: 32px 0 0;
+
+  .logo {
+    height: 18px;
+  }
+
+  a {
+    color: var(--text-h);
+    font-size: 16px;
+    border-radius: 6px;
+    background: var(--social-bg);
+    display: flex;
+    padding: 6px 12px;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: box-shadow 0.3s;
+
+    &:hover {
+      box-shadow: var(--shadow);
+    }
+    .button-icon {
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    li {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    a {
+      width: 100%;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+  }
+}
+
+#spacer {
+  height: 88px;
+  border-top: 1px solid var(--border);
+  @media (max-width: 1024px) {
+    height: 48px;
+  }
+}
+
+.ticks {
+  position: relative;
+  width: 100%;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -4.5px;
+    border: 5px solid transparent;
+  }
+
+  &::before {
+    left: 0;
+    border-left-color: var(--border);
+  }
+  &::after {
+    right: 0;
+    border-right-color: var(--border);
+  }
+}
+
+
+/* =========================================================================
+   EMS AUTHENTICATION / LOGIN
+   ========================================================================= */
+
+.ems-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(29, 105, 143, 0.35), transparent 34%),
+    radial-gradient(circle at 85% 90%, rgba(15, 76, 107, 0.3), transparent 35%),
+    #062c43;
+}
+
+.ems-login-shell {
+  width: 100%;
+  max-width: 520px;
+}
+
+.ems-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: white;
+  margin: 0 0 18px 4px;
+}
+
+.ems-login-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #0b3d5c;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.ems-login-title {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.ems-login-subtitle {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.ems-login-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.ems-login-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.ems-role-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: 0.16s ease;
+}
+
+.ems-role-card:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.ems-role-card-active {
+  border-color: #0b3d5c;
+  background: #f0f7fa;
+  box-shadow: 0 0 0 2px rgba(11, 61, 92, 0.12);
+}
+
+.ems-role-icon {
+  width: 39px;
+  height: 39px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #475569;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+
+.ems-role-icon-active {
+  color: #0b3d5c;
+  background: #dcecf3;
+}
+
+.ems-login-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-size: 15px;
+  color: #0f172a;
+  background: white;
+  outline: none;
+  transition: 0.16s ease;
+}
+
+.ems-login-input:focus {
+  border-color: #0b3d5c;
+  box-shadow: 0 0 0 3px rgba(11, 61, 92, 0.11);
+}
+
+.ems-login-input:disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.ems-login-error {
+  display: flex;
+  gap: 9px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ems-login-submit {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #0b3d5c;
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.16s ease;
+}
+
+.ems-login-submit:hover:not(:disabled) {
+  background: #082f47;
+  transform: translateY(-1px);
+}
+
+.ems-login-submit:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.ems-login-security {
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 8px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.ems-login-security svg {
+  color: #0f766e;
+  flex-shrink: 0;
+}
+
+.ems-login-footer {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  font-size: 11px;
+  margin-top: 16px;
+}
+
+@media (max-width: 560px) {
+  .ems-login-page {
+    padding: 20px 12px;
+    align-items: flex-start;
+  }
+
+  .ems-login-card {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+
+  .ems-login-brand {
+    margin-top: 8px;
+  }
+}
+
+/* Administrator workspace */
+.admin-stat-grid { display: grid; gap: .75rem; }

@@ -1,16 +1,4 @@
-Now I'll make the requested changes:
-
-1. Remove patient name from frontend display
-2. Correct the doctor URL 
-3. Prevent Metro and other operators from entering paramedic dispatch
-
-```javascript
-<invoke name="create_or_update_file">
-<parameter name="path">src/App.jsx</parameter>
-<parameter name="repo">raidenvent/lalitpur-ems</parameter>
-<parameter name="message">Fix: Remove patient name, correct doctor URL, restrict paramedic dispatch access</parameter>
-<parameter name="sha">8cf8bada51e647c81f0e7f4aecbaaa7daf2eb9fb</parameter>
-<parameter name="content">import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Ambulance, Phone, MapPin, User, Users, Clock, AlertTriangle, CheckCircle2,
   Circle, ChevronRight, ChevronLeft, Search, Plus, LogOut, ShieldCheck,
@@ -281,7 +269,6 @@ function blankCase(encId, user) {
 function summarize(c) {
   return {
     encId: c.encId,
-    patientName: c.patient?.name || "Unknown",
     age: c.patient?.age || "",
     sex: c.patient?.sex || "",
     status: c.status,
@@ -1215,8 +1202,8 @@ function CaseWorkspace({ encId, session, onClose, queuePending }) {
     );
   }
 
-  const isDoctor = session.role === "DOCTOR";
-  const readOnly = isDoctor || c.status === STATUS.COMPLETED;
+  const isParamedic = session.role === "PARAMEDIC";
+  const readOnly = !isParamedic || c.status === STATUS.COMPLETED;
 
   const tabs = [
     { key: "overview", label: "Overview", icon: FileText },
@@ -1342,7 +1329,7 @@ function TimelineTab({ c, persist, readOnly, session }) {
   const done = new Set(c.timeline.map((t) => t.type));
   const nextIdx = TIMELINE_STEPS.findIndex((s) => !done.has(s.key));
   const isParamedic = session.role === "PARAMEDIC";
-  const canRecordStep = (step) => !readOnly && isParamedic && (step.key !== "DISPATCHED" || isParamedic);
+  const canRecordStep = () => !readOnly && isParamedic;
 
   function pressStep(step) {
     persist((next) => {
@@ -1683,7 +1670,7 @@ function DestinationTab({ c, persist, readOnly, session }) {
               <TextInput v={alt.consentName} set={(v) => setAlt({ ...alt, consentName: v })} placeholder="Name of person giving consent" />
               <TextInput v={alt.relation} set={(v) => setAlt({ ...alt, relation: v })} placeholder="Relationship to patient" />
             </div>
-            <button onClick={submitAlternative} className="w-full bg-amber-600 text-white font-semibold py-2.5 rounded-lg">Record Consent & Set Destination</button>
+            <button onClick={submitAlternative} className="w-full bg-amber-600 text-white font-semibold py-2.5 rounded-lg">Record Consent &amp; Set Destination</button>
           </div>
         )}
       </Section>
@@ -1795,7 +1782,7 @@ function QRTab({ c, session }) {
     return () => { cancelled = true; };
   }, [c.encId, session.token]);
 
-  const doctorUrl = qr?.url || qr?.secureUrl || qr?.doctorUrl || `${window.location.origin}/case/${encodeURIComponent(c.encId)}`;
+  const doctorUrl = qr?.url || qr?.secureUrl || qr?.doctorUrl || `${window.location.origin}/doctor/case/${encodeURIComponent(c.encId)}`;
 
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -2159,5 +2146,3 @@ function secondsToMinutes(value) {
 function Metric({ label, value }) {
   return <div className="flex justify-between border-b border-slate-50 py-1"><span>{label}</span><strong>{value}</strong></div>;
 }
-</parameter>
-</invoke>

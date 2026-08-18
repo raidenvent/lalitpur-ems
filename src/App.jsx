@@ -318,7 +318,7 @@ export default function App() {
   // If a QR/secure link opens /case/:encId, remember that case and open it
   // after the user authenticates. This makes QR links work on localhost too.
   useEffect(() => {
-    const match = window.location.pathname.match(/^\/case\/([^/]+)\/?$/i);
+    const match = window.location.pathname.match(/^\/(?:doctor\/)?case\/([^/]+)\/?$/i);
     if (match && session) {
       const id = decodeURIComponent(match[1]).toUpperCase();
       setActiveEncId(id);
@@ -935,7 +935,7 @@ function NewCaseForm({ session, onDone, onCancel, queuePending }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     callerName: "", callerPhone: "",
-    patientName: "", age: "", sex: "", numPatients: 1,
+    age: "", sex: "", numPatients: 1,
     address: "", landmark: "", chiefComplaint: "",
     isEmergency: true, suspectedStroke: false, suspectedMI: false, description: "",
   });
@@ -955,7 +955,7 @@ function NewCaseForm({ session, onDone, onCancel, queuePending }) {
       const result = await db.createCase({
         caller: { name: form.callerName, phone: form.callerPhone },
         patient: {
-          name: form.patientName || "Unknown",
+          name: "Unknown",
           age: form.age ? Number(form.age) : null,
           sex: form.sex || "Unknown",
           numPatients: Number(form.numPatients) || 1,
@@ -1003,7 +1003,6 @@ function NewCaseForm({ session, onDone, onCancel, queuePending }) {
 
       <Section title="Patient Information">
         <Grid2>
-          <Field label="Patient name"><TextInput v={form.patientName} set={(v) => set("patientName", v)} placeholder="Unknown if not available" /></Field>
           <Field label="Age"><TextInput v={form.age} set={(v) => set("age", v)} /></Field>
           <Field label="Sex">
             <RadioRow options={["Male", "Female", "Other", "Unknown"]} v={form.sex} set={(v) => set("sex", v)} />
@@ -1333,6 +1332,8 @@ function KV({ k, v }) {
 function TimelineTab({ c, persist, readOnly, session }) {
   const done = new Set(c.timeline.map((t) => t.type));
   const nextIdx = TIMELINE_STEPS.findIndex((s) => !done.has(s.key));
+  const isParamedic = session.role === "PARAMEDIC";
+  const canRecordStep = (step) => !readOnly && (step.key !== "DISPATCHED" || isParamedic);
 
   function pressStep(step) {
     persist((next) => {
@@ -1357,7 +1358,7 @@ function TimelineTab({ c, persist, readOnly, session }) {
                     {evt && <div className="text-xs text-slate-500">{fmtTime(evt.ts)} · {evt.user}</div>}
                   </div>
                 </div>
-                {!evt && isNext && !readOnly && (
+                {!evt && isNext && canRecordStep(step) && (
                   <button onClick={() => pressStep(step)} className="bg-[#0B3D5C] text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-1">
                     Mark <ArrowRight size={14} />
                   </button>
@@ -1366,7 +1367,9 @@ function TimelineTab({ c, persist, readOnly, session }) {
             );
           })}
         </div>
-        <p className="text-xs text-slate-400 mt-2">Times are recorded automatically at the moment each button is pressed and cannot be edited — corrections go through the audit trail.</p>
+        <p className="text-xs text-slate-400 mt-2">
+          Dispatch and clinical timeline times are recorded automatically. Only the logged-in paramedic can enter dispatch/timeline times.
+        </p>
       </Section>
       <Section title="Case Type (drives Special tab)">
         <p className="text-xs text-slate-500 mb-2">Set based on Metro intake; adjust if on-scene findings differ.</p>
@@ -1510,15 +1513,17 @@ function TraumaBlock({ c, persist, readOnly }) {
 function VitalsTab({ c, persist, readOnly, session }) {
   const [form, setForm] = useState({ bp: "", pulse: "", rr: "", spo2: "", gcs: "", temp: "" });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const isParamedic = session.role === "PARAMEDIC";
 
   function addVital() {
-    persist((n) => { n.vitals.push({ ts: Date.now(), user: session.name, ...form }); }, "Vitals recorded");
+    if (!isParamedic) return;
+    persist((n) => { n.vitals.push({ ts: Date.now(), user: session.name, role: session.role, ...form }); }, "Vitals recorded");
     setForm({ bp: "", pulse: "", rr: "", spo2: "", gcs: "", temp: "" });
   }
 
   return (
     <div className="space-y-4">
-      {!readOnly && (
+      {isParamedic && !readOnly && (
         <Section title="Record New Vitals">
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             <Field label="BP"><TextInput v={form.bp} set={(v) => set("bp", v)} placeholder="120/80" /></Field>
@@ -1781,7 +1786,11 @@ function QRTab({ c, session }) {
     return () => { cancelled = true; };
   }, [c.encId, session.token]);
 
-  const localUrl = `${window.location.origin}/case/${encodeURIComponent(c.encId)}`;
+  const doctorUrl =
+    qr?.url ||
+    qr?.secureUrl ||
+    qr?.doctorUrl ||
+    `${window.location.origin}/doctor/case/${encodeURIComponent(c.encId)}`;
 
   return (
     <div className="grid md:grid-cols-2 gap-4">
@@ -1794,8 +1803,8 @@ function QRTab({ c, session }) {
               {error || "Generating QR…"}
             </div>
           )}
-          <a href={localUrl} className="font-mono text-xs text-[#0B3D5C] underline break-all text-center">
-            {localUrl}
+          <a href={doctorUrl} className="font-mono text-xs text-[#0B3D5C] underline break-all text-center">
+            {doctorUrl}
           </a>
           <p className="text-xs text-slate-400 text-center max-w-xs">
             Scan this QR or open the link. The link contains only the EncID; the Doctor must sign in before viewing the case.

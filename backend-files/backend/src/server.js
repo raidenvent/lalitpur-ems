@@ -4,6 +4,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
+const { pool } = require("./db");
 
 const authRoutes = require("./routes/auth");
 const caseRoutes = require("./routes/cases");
@@ -24,7 +25,15 @@ app.use("/api/auth/login", rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }));
 // General API rate limit as a safety net.
 app.use("/api", rateLimit({ windowMs: 60 * 1000, max: 300 }));
 
-app.get("/api/health", (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+app.get("/api/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ ok: true, database: "connected", time: new Date().toISOString() });
+  } catch (error) {
+    console.error("[health] database check failed", error);
+    res.status(503).json({ ok: false, database: "unavailable", time: new Date().toISOString() });
+  }
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/cases", caseRoutes);
@@ -37,4 +46,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`[lmc-ems] backend listening on :${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`[lmc-ems] backend listening on :${PORT}`));
+}
+
+module.exports = app;

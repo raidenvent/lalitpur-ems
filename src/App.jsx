@@ -460,6 +460,12 @@ function LoginScreen({ onLogin }) {
       }
 
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("EMS API route was not found. Redeploy the Vercel backend function.");
+        }
+        if (response.status >= 500) {
+          throw new Error(`EMS backend is unavailable (HTTP ${response.status}). Check the Vercel Function logs and environment variables.`);
+        }
         throw new Error(data.error || "Invalid phone number or password.");
       }
 
@@ -478,7 +484,7 @@ function LoginScreen({ onLogin }) {
     } catch (err) {
       setError(
         err?.message?.includes("Failed to fetch")
-          ? "Cannot reach the login server. Make sure the EMS backend is running."
+          ? `Cannot reach the EMS API at ${API_BASE}. Check the deployment URL, CORS settings, and Vercel Function status.`
           : err?.message || "Login failed."
       );
     } finally {

@@ -114,7 +114,7 @@ router.get("/:encId", async (req, res) => {
 
 /* -------------------------------- TIMELINE ---------------------------------- */
 // POST /api/cases/:encId/timeline  { eventType }  — PARAMEDIC only, §5.
-router.post("/:encId/timeline", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.post("/:encId/timeline", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { eventType } = req.body || {};
   if (!TIMELINE_TO_STATUS[eventType]) return res.status(400).json({ error: "Invalid event type" });
@@ -150,7 +150,7 @@ router.post("/:encId/timeline", requireRole("PARAMEDIC", "ADMIN"), async (req, r
 
 /* -------------------------------- ASSESSMENT --------------------------------- */
 // PATCH /api/cases/:encId/assessment  { section, patch, label } — PARAMEDIC only.
-router.patch("/:encId/assessment", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.patch("/:encId/assessment", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { section, patch, caseType, label } = req.body || {};
   const validSections = ["airway", "breathing", "circulation", "disability", "exposure", "stroke", "mi", "trauma"];
@@ -181,7 +181,7 @@ router.patch("/:encId/assessment", requireRole("PARAMEDIC", "ADMIN"), async (req
 });
 
 /* ----------------------------------- VITALS ------------------------------------ */
-router.post("/:encId/vitals", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.post("/:encId/vitals", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { bp, pulse, rr, spo2, gcs, temp } = req.body || {};
   const client = await pool.connect();
@@ -203,7 +203,7 @@ router.post("/:encId/vitals", requireRole("PARAMEDIC", "ADMIN"), async (req, res
 });
 
 /* ------------------------------- MEDICATIONS / INTERVENTIONS -------------------- */
-router.post("/:encId/medications", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.post("/:encId/medications", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { medication, dose, route, notes } = req.body || {};
   if (!medication?.trim()) return res.status(400).json({ error: "medication is required" });
@@ -221,7 +221,7 @@ router.post("/:encId/medications", requireRole("PARAMEDIC", "ADMIN"), async (req
   finally { client.release(); }
 });
 
-router.post("/:encId/interventions", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.post("/:encId/interventions", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { type, notes } = req.body || {};
   if (!type?.trim()) return res.status(400).json({ error: "type is required" });
@@ -238,7 +238,7 @@ router.post("/:encId/interventions", requireRole("PARAMEDIC", "ADMIN"), async (r
 
 /* ------------------------------------ DESTINATION -------------------------------- */
 // PUT /api/cases/:encId/destination  { facility, isAlternative, consent? }
-router.put("/:encId/destination", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.put("/:encId/destination", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { facility, isAlternative, consent } = req.body || {};
   if (!facility?.trim()) return res.status(400).json({ error: "facility is required" });
@@ -270,7 +270,7 @@ router.put("/:encId/destination", requireRole("PARAMEDIC", "ADMIN"), async (req,
 });
 
 /* -------------------------------------- HANDOVER ----------------------------------- */
-router.patch("/:encId/handover", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.patch("/:encId/handover", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const patch = req.body || {};
   const cols = {
@@ -307,7 +307,7 @@ router.patch("/:encId/handover", requireRole("PARAMEDIC", "ADMIN"), async (req, 
 
 /* ---------------------------------- SUMMARY / CLOSE CASE ---------------------------- */
 // PATCH /api/cases/:encId/summary  { summaryText } — optional draft/final summary.
-router.patch("/:encId/summary", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.patch("/:encId/summary", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { summaryText = "" } = req.body || {};
   try {
@@ -328,7 +328,7 @@ router.patch("/:encId/summary", requireRole("PARAMEDIC", "ADMIN"), async (req, r
 });
 
 // POST /api/cases/:encId/close  { summaryText? }
-router.post("/:encId/close", requireRole("PARAMEDIC", "ADMIN"), async (req, res) => {
+router.post("/:encId/close", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { summaryText = "" } = req.body || {};
 
@@ -367,7 +367,7 @@ router.post("/:encId/close", requireRole("PARAMEDIC", "ADMIN"), async (req, res)
 // The QR encodes ONLY the pointer URL, never patient data (§15).
 router.get("/:encId/qr", async (req, res) => {
   const base = (process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
-  const url = `${base}/case/${encodeURIComponent(req.params.encId)}`;
+  const url = `${base}/doctor/case/${encodeURIComponent(req.params.encId)}`;
   const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: 320 });
   res.json({ url, qr: dataUrl });
 });

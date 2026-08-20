@@ -405,18 +405,18 @@ function LoginScreen({ onLogin }) {
     {
       key: "METRO",
       label: "Metro Operator",
-      description: "1133 intake & ambulance dispatch",
+      description: "1131 intake & ambulance dispatch",
       icon: Building2,
     },
     {
       key: "PARAMEDIC",
-      label: "Paramedic",
+      label: "HCW (Doctor/Paramedic)",
       description: "Field response & patient care",
       icon: Ambulance,
     },
     {
       key: "DOCTOR",
-      label: "Doctor / Receiving Facility",
+      label: "Receiving Facility",
       description: "Clinical review & handover",
       icon: Stethoscope,
     },
@@ -741,7 +741,7 @@ function MetroDashboard({ cases, loading, onNewCase, onOpenCase, onRefresh }) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-bold">Metro Call-Centre Dashboard</h1>
         <button onClick={onNewCase} className="bg-[#0B3D5C] text-white font-semibold px-5 py-3 rounded-lg flex items-center gap-2">
-          <Phone size={18} /> New Emergency Call (1133)
+          <Phone size={18} /> New Emergency Call (1131)
         </button>
       </div>
 
@@ -992,7 +992,7 @@ function NewCaseForm({ session, onDone, onCancel, queuePending }) {
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold flex items-center gap-2"><Phone size={20} /> New Call — 1133 Intake</h1>
+        <h1 className="text-xl font-bold flex items-center gap-2"><Phone size={20} /> New Call — 1131 Intake</h1>
         <button onClick={onCancel} className="text-slate-400 hover:text-slate-700"><X size={20} /></button>
       </div>
 

@@ -80,8 +80,8 @@ import "./App.css";
 const ROLES = {
   ADMIN: "Admin",
   METRO: "Metro Operator",
-  PARAMEDIC: "Paramedic",
-  DOCTOR: "Doctor / Receiving Facility",
+  PARAMEDIC: "HCW( Doctor/Paramedic)",
+  DOCTOR: "Receiving Facility",
 };
 
 const STATUS = {

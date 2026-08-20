@@ -243,6 +243,8 @@ function blankCase(encId, user) {
     timeline: [],
     assessment: {
       caseType: "medical",
+      exsanguation: {bleeding: "No catastrophic bleeding", intervention: "", bleedingControlled: "", site: "", tourniquetTime: "", remarks: "",
+},
       airway: { status: "", intervention: "", notes: "" },
       breathing: { rr: "", spo2: "", distress: "", o2: "", intervention: "", notes: "" },
       circulation: { pulse: "", bp: "", capRefill: "", bleeding: "", ivAccess: "", intervention: "", notes: "" },
@@ -1214,7 +1216,7 @@ function CaseWorkspace({ encId, session, onClose, queuePending }) {
   const tabs = [
     { key: "overview", label: "Overview", icon: FileText },
     { key: "timeline", label: "Timeline", icon: Clock },
-    { key: "abcde", label: "ABCDE", icon: Stethoscope },
+    { key: "abcde", label: "XABCDE", icon: Stethoscope },
     { key: "special", label: CASE_TYPES.find((t) => t.key === c.assessment.caseType)?.label || "Case Type", icon: c.assessment.caseType === "trauma" ? Bone : Brain },
     { key: "vitals", label: "Vitals", icon: Activity },
     { key: "tx", label: "Meds / Interventions", icon: Pill },
@@ -1255,7 +1257,7 @@ function CaseWorkspace({ encId, session, onClose, queuePending }) {
       <div>
         {tab === "overview" && <OverviewTab c={c} />}
         {tab === "timeline" && <TimelineTab c={c} persist={persist} readOnly={readOnly} session={session} />}
-        {tab === "abcde" && <ABCDETab c={c} persist={persist} readOnly={readOnly} />}
+        {tab === "Xabcde" && <ABCDETab c={c} persist={persist} readOnly={readOnly} />}
         {tab === "special" && <SpecialTab c={c} persist={persist} readOnly={readOnly} />}
         {tab === "vitals" && <VitalsTab c={c} persist={persist} readOnly={readOnly} session={session} />}
         {tab === "tx" && <TxTab c={c} persist={persist} readOnly={readOnly} session={session} />}

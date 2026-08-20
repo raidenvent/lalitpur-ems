@@ -1392,61 +1392,433 @@ function TimelineTab({ c, persist, readOnly, session }) {
 
 function ABCDETab({ c, persist, readOnly }) {
   const a = c.assessment;
-  const upd = (section, patch, label) => persist((n) => { Object.assign(n.assessment[section], patch); }, `${label} updated`);
+  const upd = (section, patch, label) =>
+    persist((n) => {
+      Object.assign(n.assessment[section], patch);
+    }, `${label} updated`);
 
   return (
     <div className="space-y-4">
+
+      {/* X — Exsanguination / Catastrophic Hemorrhage */}
+      <Section title="X — Exsanguination / Catastrophic Hemorrhage">
+
+        <Field label="Bleeding">
+          <RadioRow
+            options={["No catastrophic bleeding", "Catastrophic bleeding"]}
+            v={a.x?.bleeding || ""}
+            set={(v) =>
+              !readOnly &&
+              upd("x", { bleeding: v }, "X — Bleeding")
+            }
+          />
+        </Field>
+
+        <Field label="Intervention">
+          <div className="grid sm:grid-cols-2 gap-2">
+            {[
+              "Tourniquet applied",
+              "Direct pressure/compression",
+              "Hemostatic dressing applied",
+              "Wound packing",
+              "Pressure dressing applied",
+              "Other intervention",
+            ].map((item) => {
+              const selected = (a.x?.intervention || "")
+                .split(" | ")
+                .filter(Boolean)
+                .includes(item);
+
+              return (
+                <label
+                  key={item}
+                  className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    disabled={readOnly}
+                    onChange={(e) => {
+                      const current = (a.x?.intervention || "")
+                        .split(" | ")
+                        .filter(Boolean);
+
+                      const next = e.target.checked
+                        ? [...current, item]
+                        : current.filter((x) => x !== item);
+
+                      upd(
+                        "x",
+                        { intervention: next.join(" | ") },
+                        `X intervention: ${item}`
+                      );
+                    }}
+                  />
+                  {item}
+                </label>
+              );
+            })}
+          </div>
+        </Field>
+
+        <Grid2>
+          <Field label="Bleeding controlled">
+            <RadioRow
+              options={["Yes", "No"]}
+              v={a.x?.bleedingControlled || ""}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "x",
+                  { bleedingControlled: v },
+                  "Bleeding controlled"
+                )
+              }
+            />
+          </Field>
+
+          <Field label="Site">
+            <TextInput
+              v={a.x?.site || ""}
+              set={(v) =>
+                !readOnly &&
+                upd("x", { site: v }, "Bleeding site")
+              }
+            />
+          </Field>
+        </Grid2>
+
+        <Grid2>
+          <Field label="Tourniquet time">
+            <TextInput
+              v={a.x?.tourniquetTime || ""}
+              set={(v) =>
+                !readOnly &&
+                upd("x", { tourniquetTime: v }, "Tourniquet time")
+              }
+            />
+          </Field>
+
+          <Field label="Intervention details/remarks">
+            <TextArea
+              v={a.x?.remarks || ""}
+              set={(v) =>
+                !readOnly &&
+                upd("x", { remarks: v }, "X intervention remarks")
+              }
+              rows={2}
+            />
+          </Field>
+        </Grid2>
+
+      </Section>
+
+      {/* A — Airway */}
       <Section title="A — Airway">
         <Grid2>
-          <Field label="Status"><RadioRow options={["Patent", "Compromised", "Obstructed"]} v={a.airway.status} set={(v) => !readOnly && upd("airway", { status: v }, "Airway status")} /></Field>
-          <Field label="Intervention"><TextInput v={a.airway.intervention} set={(v) => !readOnly && upd("airway", { intervention: v }, "Airway intervention")} /></Field>
+          <Field label="Status">
+            <RadioRow
+              options={["Patent", "Compromised", "Obstructed"]}
+              v={a.airway.status}
+              set={(v) =>
+                !readOnly &&
+                upd("airway", { status: v }, "Airway status")
+              }
+            />
+          </Field>
+
+          <Field label="Intervention">
+            <TextInput
+              v={a.airway.intervention}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "airway",
+                  { intervention: v },
+                  "Airway intervention"
+                )
+              }
+            />
+          </Field>
         </Grid2>
-        <Field label="Notes"><TextArea v={a.airway.notes} set={(v) => !readOnly && upd("airway", { notes: v }, "Airway notes")} rows={2} /></Field>
+
+        <Field label="Notes">
+          <TextArea
+            v={a.airway.notes}
+            set={(v) =>
+              !readOnly &&
+              upd("airway", { notes: v }, "Airway notes")
+            }
+            rows={2}
+          />
+        </Field>
       </Section>
 
+      {/* B — Breathing */}
       <Section title="B — Breathing">
         <div className="grid sm:grid-cols-4 gap-3">
-          <Field label="Resp. rate"><TextInput v={a.breathing.rr} set={(v) => !readOnly && upd("breathing", { rr: v }, "RR")} /></Field>
-          <Field label="SpO2 %"><TextInput v={a.breathing.spo2} set={(v) => !readOnly && upd("breathing", { spo2: v }, "SpO2")} /></Field>
-          <Field label="Distress"><RadioRow options={["None", "Mild", "Severe"]} v={a.breathing.distress} set={(v) => !readOnly && upd("breathing", { distress: v }, "Distress")} /></Field>
-          <Field label="Oxygen given"><TextInput v={a.breathing.o2} set={(v) => !readOnly && upd("breathing", { o2: v }, "O2")} placeholder="e.g. 4L NC" /></Field>
+          <Field label="Resp. rate">
+            <TextInput
+              v={a.breathing.rr}
+              set={(v) =>
+                !readOnly &&
+                upd("breathing", { rr: v }, "RR")
+              }
+            />
+          </Field>
+
+          <Field label="SpO2 %">
+            <TextInput
+              v={a.breathing.spo2}
+              set={(v) =>
+                !readOnly &&
+                upd("breathing", { spo2: v }, "SpO2")
+              }
+            />
+          </Field>
+
+          <Field label="Distress">
+            <RadioRow
+              options={["None", "Mild", "Severe"]}
+              v={a.breathing.distress}
+              set={(v) =>
+                !readOnly &&
+                upd("breathing", { distress: v }, "Distress")
+              }
+            />
+          </Field>
+
+          <Field label="Oxygen given">
+            <TextInput
+              v={a.breathing.o2}
+              set={(v) =>
+                !readOnly &&
+                upd("breathing", { o2: v }, "O2")
+              }
+              placeholder="e.g. 4L NC"
+            />
+          </Field>
         </div>
-        <Field label="Notes"><TextArea v={a.breathing.notes} set={(v) => !readOnly && upd("breathing", { notes: v }, "Breathing notes")} rows={2} /></Field>
+
+        <Field label="Notes">
+          <TextArea
+            v={a.breathing.notes}
+            set={(v) =>
+              !readOnly &&
+              upd(
+                "breathing",
+                { notes: v },
+                "Breathing notes"
+              )
+            }
+            rows={2}
+          />
+        </Field>
       </Section>
 
+      {/* C — Circulation */}
       <Section title="C — Circulation">
         <div className="grid sm:grid-cols-4 gap-3">
-          <Field label="Pulse"><TextInput v={a.circulation.pulse} set={(v) => !readOnly && upd("circulation", { pulse: v }, "Pulse")} /></Field>
-          <Field label="BP"><TextInput v={a.circulation.bp} set={(v) => !readOnly && upd("circulation", { bp: v }, "BP")} placeholder="120/80" /></Field>
-          <Field label="Cap refill"><TextInput v={a.circulation.capRefill} set={(v) => !readOnly && upd("circulation", { capRefill: v }, "Cap refill")} /></Field>
-          <Field label="Bleeding"><TextInput v={a.circulation.bleeding} set={(v) => !readOnly && upd("circulation", { bleeding: v }, "Bleeding")} /></Field>
+          <Field label="Pulse">
+            <TextInput
+              v={a.circulation.pulse}
+              set={(v) =>
+                !readOnly &&
+                upd("circulation", { pulse: v }, "Pulse")
+              }
+            />
+          </Field>
+
+          <Field label="BP">
+            <TextInput
+              v={a.circulation.bp}
+              set={(v) =>
+                !readOnly &&
+                upd("circulation", { bp: v }, "BP")
+              }
+              placeholder="120/80"
+            />
+          </Field>
+
+          <Field label="Cap refill">
+            <TextInput
+              v={a.circulation.capRefill}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "circulation",
+                  { capRefill: v },
+                  "Cap refill"
+                )
+              }
+            />
+          </Field>
+
+          <Field label="Bleeding">
+            <TextInput
+              v={a.circulation.bleeding}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "circulation",
+                  { bleeding: v },
+                  "Bleeding"
+                )
+              }
+            />
+          </Field>
         </div>
-        <Field label="IV access"><TextInput v={a.circulation.ivAccess} set={(v) => !readOnly && upd("circulation", { ivAccess: v }, "IV access")} /></Field>
-        <Field label="Notes"><TextArea v={a.circulation.notes} set={(v) => !readOnly && upd("circulation", { notes: v }, "Circulation notes")} rows={2} /></Field>
+
+        <Field label="IV access">
+          <TextInput
+            v={a.circulation.ivAccess}
+            set={(v) =>
+              !readOnly &&
+              upd(
+                "circulation",
+                { ivAccess: v },
+                "IV access"
+              )
+            }
+          />
+        </Field>
+
+        <Field label="Notes">
+          <TextArea
+            v={a.circulation.notes}
+            set={(v) =>
+              !readOnly &&
+              upd(
+                "circulation",
+                { notes: v },
+                "Circulation notes"
+              )
+            }
+            rows={2}
+          />
+        </Field>
       </Section>
 
+      {/* D — Disability */}
       <Section title="D — Disability">
         <div className="grid sm:grid-cols-4 gap-3">
-          <Field label="GCS"><TextInput v={a.disability.gcs} set={(v) => !readOnly && upd("disability", { gcs: v }, "GCS")} /></Field>
-          <Field label="Blood glucose"><TextInput v={a.disability.glucose} set={(v) => !readOnly && upd("disability", { glucose: v }, "Glucose")} /></Field>
-          <Field label="Pupils"><TextInput v={a.disability.pupils} set={(v) => !readOnly && upd("disability", { pupils: v }, "Pupils")} /></Field>
-          <Field label="Seizure"><RadioRow options={["No", "Yes"]} v={a.disability.seizure} set={(v) => !readOnly && upd("disability", { seizure: v }, "Seizure")} /></Field>
+          <Field label="GCS">
+            <TextInput
+              v={a.disability.gcs}
+              set={(v) =>
+                !readOnly &&
+                upd("disability", { gcs: v }, "GCS")
+              }
+            />
+          </Field>
+
+          <Field label="Blood glucose">
+            <TextInput
+              v={a.disability.glucose}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "disability",
+                  { glucose: v },
+                  "Glucose"
+                )
+              }
+            />
+          </Field>
+
+          <Field label="Pupils">
+            <TextInput
+              v={a.disability.pupils}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "disability",
+                  { pupils: v },
+                  "Pupils"
+                )
+              }
+            />
+          </Field>
+
+          <Field label="Seizure">
+            <RadioRow
+              options={["No", "Yes"]}
+              v={a.disability.seizure}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "disability",
+                  { seizure: v },
+                  "Seizure"
+                )
+              }
+            />
+          </Field>
         </div>
-        <Field label="Neurological findings"><TextArea v={a.disability.neuro} set={(v) => !readOnly && upd("disability", { neuro: v }, "Neuro findings")} rows={2} /></Field>
+
+        <Field label="Neurological findings">
+          <TextArea
+            v={a.disability.neuro}
+            set={(v) =>
+              !readOnly &&
+              upd(
+                "disability",
+                { neuro: v },
+                "Neuro findings"
+              )
+            }
+            rows={2}
+          />
+        </Field>
       </Section>
 
+      {/* E — Exposure / Examination */}
       <Section title="E — Exposure / Examination">
         <Grid2>
-          <Field label="Temperature"><TextInput v={a.exposure.temp} set={(v) => !readOnly && upd("exposure", { temp: v }, "Temp")} /></Field>
-          <Field label="Injuries"><TextInput v={a.exposure.injuries} set={(v) => !readOnly && upd("exposure", { injuries: v }, "Injuries")} /></Field>
+          <Field label="Temperature">
+            <TextInput
+              v={a.exposure.temp}
+              set={(v) =>
+                !readOnly &&
+                upd("exposure", { temp: v }, "Temp")
+              }
+            />
+          </Field>
+
+          <Field label="Injuries">
+            <TextInput
+              v={a.exposure.injuries}
+              set={(v) =>
+                !readOnly &&
+                upd(
+                  "exposure",
+                  { injuries: v },
+                  "Injuries"
+                )
+              }
+            />
+          </Field>
         </Grid2>
-        <Field label="Relevant exam findings"><TextArea v={a.exposure.findings} set={(v) => !readOnly && upd("exposure", { findings: v }, "Exam findings")} rows={2} /></Field>
+
+        <Field label="Relevant exam findings">
+          <TextArea
+            v={a.exposure.findings}
+            set={(v) =>
+              !readOnly &&
+              upd(
+                "exposure",
+                { findings: v },
+                "Exam findings"
+              )
+            }
+            rows={2}
+          />
+        </Field>
       </Section>
+
     </div>
   );
-}
-
-/* ------------------------------- SPECIAL / CASE-TYPE -------------------------- */
+}/* ------------------------------- SPECIAL / CASE-TYPE -------------------------- */
 
 function SpecialTab({ c, persist, readOnly }) {
   const type = c.assessment.caseType;

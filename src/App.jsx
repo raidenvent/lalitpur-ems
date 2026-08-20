@@ -1512,7 +1512,6 @@ function ABCDETab({ c, persist, readOnly }) {
   </Grid2>
 
 </Section>
-      </Section>
 
       {/* A — Airway */}
       <Section title="A — Airway">

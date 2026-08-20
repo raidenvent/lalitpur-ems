@@ -78,16 +78,7 @@ router.get("/export.xlsx", async (req, res) => {
   try {
     const [cases, assessments, vitals, medications, interventions, timeline, handovers, auditRows] = await Promise.all([
       pool.query(
-        `SELECT c.enc_id, c.created_at, c.updated_at, c.status, c.patient_age, c.patient_sex,
-                c.num_patients, c.address, c.landmark, c.chief_complaint, c.is_emergency,
-                c.suspected_stroke, c.suspected_mi, c.description, c.case_type,
-                c.ambulance_required, c.ambulance_reason, amb.code AS ambulance,
-                c.destination_facility, c.destination_is_alt, c.summary_text,
-                c.summary_closed_at, creator.name AS created_by, closer.name AS closed_by
-         FROM cases c
-         LEFT JOIN ambulances amb ON amb.id=c.ambulance_id
-         LEFT JOIN users creator ON creator.id=c.created_by
-         LEFT JOIN users closer ON closer.id=c.summary_closed_by
+        `SELECT c.* FROM ems_case_export c
          WHERE ${withinRange} ORDER BY c.created_at`, range),
       pool.query(
         `SELECT a.enc_id, a.updated_at, a.x, a.airway, a.breathing, a.circulation,
@@ -150,7 +141,7 @@ router.get("/export.xlsx", async (req, res) => {
       });
     };
 
-    addSheet("Cases", cases.rows);
+    addSheet("Cases with Clinical Data", cases.rows);
     addSheet("Clinical Charting", assessments.rows);
     addSheet("Vitals", vitals.rows);
     addSheet("Medications", medications.rows);

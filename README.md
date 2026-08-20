@@ -76,11 +76,15 @@ Redeploy the whole project, then run this short test with a new case:
 3. Open the Audit Log tab and confirm each clinical action is present with the
    recorded value and staff member.
 4. As Admin, open the Admin Panel and select **Download Excel**. The workbook is
-   created from the live Neon tables and contains separate Clinical Charting,
-   Vitals, Medications, Interventions, Timeline, Handovers, and Audit Log sheets.
+   created from the live Neon tables. The first sheet, **Cases with Clinical
+   Data**, includes the complete charting, vitals, medication and intervention
+   arrays for each EncID. Separate detailed sheets are also included.
 
 The first API request after deployment automatically adds the missing XABCDE
-`x` column to older Neon databases. This migration is safe to run repeatedly.
+`x` column and creates the read-only `ems_case_export` view in older Neon
+databases. In Neon Console, export this view instead of exporting only the
+`cases` table. The `cases` table cannot contain rows from the separate clinical
+event tables by itself. This migration is safe to run repeatedly.
 
 ## Build checks
 

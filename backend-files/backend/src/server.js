@@ -18,7 +18,57 @@ let schemaReady;
 function ensureSchema() {
   if (!schemaReady) {
     schemaReady = pool.query(
-      `ALTER TABLE assessments ADD COLUMN IF NOT EXISTS x JSONB NOT NULL DEFAULT '{}'`
+      `ALTER TABLE assessments ADD COLUMN IF NOT EXISTS x JSONB NOT NULL DEFAULT '{}';
+       CREATE OR REPLACE VIEW ems_case_export AS
+       SELECT
+         c.enc_id, c.created_at, c.updated_at, c.status, c.patient_age,
+         c.patient_sex, c.num_patients, c.address, c.landmark,
+         c.chief_complaint, c.is_emergency, c.suspected_stroke,
+         c.suspected_mi, c.case_type, amb.code AS ambulance,
+         c.destination_facility, c.summary_text,
+         creator.name AS created_by, closer.name AS closed_by,
+         jsonb_build_object(
+           'x', COALESCE(a.x, '{}'::jsonb),
+           'airway', COALESCE(a.airway, '{}'::jsonb),
+           'breathing', COALESCE(a.breathing, '{}'::jsonb),
+           'circulation', COALESCE(a.circulation, '{}'::jsonb),
+           'disability', COALESCE(a.disability, '{}'::jsonb),
+           'exposure', COALESCE(a.exposure, '{}'::jsonb),
+           'stroke', COALESCE(a.stroke, '{}'::jsonb),
+           'mi', COALESCE(a.mi, '{}'::jsonb),
+           'trauma', COALESCE(a.trauma, '{}'::jsonb)
+         ) AS clinical_charting,
+         COALESCE((
+           SELECT jsonb_agg(jsonb_build_object(
+             'time', v.ts, 'recordedBy', vu.name, 'bp', v.bp,
+             'pulse', v.pulse, 'rr', v.rr, 'spo2', v.spo2,
+             'gcs', v.gcs, 'temp', v.temp
+           ) ORDER BY v.ts)
+           FROM vitals v LEFT JOIN users vu ON vu.id=v.user_id
+           WHERE v.enc_id=c.enc_id
+         ), '[]'::jsonb) AS vitals,
+         COALESCE((
+           SELECT jsonb_agg(jsonb_build_object(
+             'time', m.ts, 'recordedBy', mu.name,
+             'medication', m.medication, 'dose', m.dose,
+             'route', m.route, 'notes', m.notes
+           ) ORDER BY m.ts)
+           FROM medications m LEFT JOIN users mu ON mu.id=m.user_id
+           WHERE m.enc_id=c.enc_id
+         ), '[]'::jsonb) AS medications,
+         COALESCE((
+           SELECT jsonb_agg(jsonb_build_object(
+             'time', i.ts, 'recordedBy', iu.name,
+             'type', i.type, 'notes', i.notes
+           ) ORDER BY i.ts)
+           FROM interventions i LEFT JOIN users iu ON iu.id=i.user_id
+           WHERE i.enc_id=c.enc_id
+         ), '[]'::jsonb) AS interventions
+       FROM cases c
+       LEFT JOIN assessments a ON a.enc_id=c.enc_id
+       LEFT JOIN ambulances amb ON amb.id=c.ambulance_id
+       LEFT JOIN users creator ON creator.id=c.created_by
+       LEFT JOIN users closer ON closer.id=c.summary_closed_by`
     );
   }
   return schemaReady;

@@ -76,6 +76,12 @@ database and recorded in the server audit log. Metro, Receiving Facility, and
 Admin users receive the same clinical case record as a read-only view. Caller
 PII remains removed from the Receiving Facility API response.
 
+For a combined CSV directly from Neon Console, select the read-only
+`ems_case_export` view. Do not export only the `cases` table and expect clinical
+events to appear there: vitals, medications and interventions are deliberately
+stored in separate append-only tables. The view combines them without copying
+or duplicating medical records.
+
 ## 6. Hardening before production (not done here — flagging explicitly)
 
 - **DB role separation**: create a low-privilege `app` Postgres role for

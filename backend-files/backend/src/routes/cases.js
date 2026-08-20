@@ -136,7 +136,11 @@ router.post("/:encId/timeline", requireRole("PARAMEDIC"), async (req, res) => {
       return res.status(409).json({ error: "This step was already recorded and cannot be re-timestamped" });
     }
     await client.query(`UPDATE cases SET status=$1, updated_at=now() WHERE enc_id=$2`, [TIMELINE_TO_STATUS[eventType], encId]);
-    await audit(client, { encId, userId: req.user.id, role: req.user.role, action: `Timeline: ${eventType}` });
+    await audit(client, {
+      encId, userId: req.user.id, role: req.user.role,
+      action: `Timeline: ${eventType}`,
+      newValue: { eventType, ts: ins.rows[0].ts, status: TIMELINE_TO_STATUS[eventType] },
+    });
     await client.query("COMMIT");
     res.json({ ts: ins.rows[0].ts, status: TIMELINE_TO_STATUS[eventType] });
   } catch (e) {
@@ -153,7 +157,7 @@ router.post("/:encId/timeline", requireRole("PARAMEDIC"), async (req, res) => {
 router.patch("/:encId/assessment", requireRole("PARAMEDIC"), async (req, res) => {
   const { encId } = req.params;
   const { section, patch, caseType, label } = req.body || {};
-  const validSections = ["airway", "breathing", "circulation", "disability", "exposure", "stroke", "mi", "trauma"];
+  const validSections = ["x", "airway", "breathing", "circulation", "disability", "exposure", "stroke", "mi", "trauma"];
 
   const client = await pool.connect();
   try {
@@ -214,7 +218,12 @@ router.post("/:encId/medications", requireRole("PARAMEDIC"), async (req, res) =>
       `INSERT INTO medications (enc_id, user_id, medication, dose, route, notes) VALUES ($1,$2,$3,$4,$5,$6)`,
       [encId, req.user.id, medication, dose, route, notes]
     );
-    await audit(client, { encId, userId: req.user.id, role: req.user.role, action: `Medication given: ${medication}` });
+    await audit(client, {
+      encId, userId: req.user.id, role: req.user.role,
+      action: `Medication given: ${medication}`,
+      newValue: { medication, dose, route, notes },
+    });
+    await client.query(`UPDATE cases SET updated_at = now() WHERE enc_id = $1`, [encId]);
     await client.query("COMMIT");
     res.status(201).json({ ok: true });
   } catch (e) { await client.query("ROLLBACK"); res.status(500).json({ error: "Could not record medication" }); }
@@ -229,7 +238,12 @@ router.post("/:encId/interventions", requireRole("PARAMEDIC"), async (req, res) 
   try {
     await client.query("BEGIN");
     await client.query(`INSERT INTO interventions (enc_id, user_id, type, notes) VALUES ($1,$2,$3,$4)`, [encId, req.user.id, type, notes]);
-    await audit(client, { encId, userId: req.user.id, role: req.user.role, action: `Intervention: ${type}` });
+    await audit(client, {
+      encId, userId: req.user.id, role: req.user.role,
+      action: `Intervention: ${type}`,
+      newValue: { type, notes },
+    });
+    await client.query(`UPDATE cases SET updated_at = now() WHERE enc_id = $1`, [encId]);
     await client.query("COMMIT");
     res.status(201).json({ ok: true });
   } catch (e) { await client.query("ROLLBACK"); res.status(500).json({ error: "Could not record intervention" }); }

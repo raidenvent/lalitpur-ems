@@ -65,10 +65,26 @@ A healthy deployment returns `{"ok":true,"database":"connected",...}`. A
 misconfigured. A function configuration error usually means `JWT_SECRET` is
 missing.
 
+## Clinical-data verification after this update
+
+Redeploy the whole project, then run this short test with a new case:
+
+1. Sign in as Paramedic and record one XABCDE field, one vital, one medication,
+   and one intervention.
+2. Open the same EncID as Metro, Receiving Facility, and Admin. Read-only users
+   refresh automatically every eight seconds while the case is open.
+3. Open the Audit Log tab and confirm each clinical action is present with the
+   recorded value and staff member.
+4. As Admin, open the Admin Panel and select **Download Excel**. The workbook is
+   created from the live Neon tables and contains separate Clinical Charting,
+   Vitals, Medications, Interventions, Timeline, Handovers, and Audit Log sheets.
+
+The first API request after deployment automatically adds the missing XABCDE
+`x` column to older Neon databases. This migration is safe to run repeatedly.
+
 ## Build checks
 
 ```bash
-npm run lint
 npm run build
 ```
 

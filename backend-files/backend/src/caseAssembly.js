@@ -16,21 +16,36 @@ async function audit(client, { encId, userId, role, action, oldValue = null, new
  *  window.storage (prototype) or this backend (production) — only the
  *  `db.*` functions in the frontend need to change. */
 async function getFullCase(encId) {
-  const { rows: caseRows } = await pool.query(`SELECT * FROM cases WHERE enc_id = $1`, [encId]);
+  const { rows: caseRows } = await pool.query(
+    `SELECT c.*, closer.name AS summary_closed_by_name
+     FROM cases c LEFT JOIN users closer ON closer.id=c.summary_closed_by
+     WHERE c.enc_id = $1`,
+    [encId]
+  );
   if (caseRows.length === 0) return null;
   const c = caseRows[0];
 
   const [{ rows: timeline }, { rows: vitals }, { rows: assessmentRows },
          { rows: medications }, { rows: interventions }, { rows: handoverRows },
          { rows: consentRows }, { rows: auditRows }] = await Promise.all([
-    pool.query(`SELECT event_type AS type, ts, user_id, notes FROM timeline_events WHERE enc_id=$1 ORDER BY ts ASC`, [encId]),
-    pool.query(`SELECT ts, user_id, bp, pulse, rr, spo2, gcs, temp FROM vitals WHERE enc_id=$1 ORDER BY ts ASC`, [encId]),
+    pool.query(`SELECT t.event_type AS type, t.ts, t.user_id, u.name AS "user", t.notes
+                FROM timeline_events t LEFT JOIN users u ON u.id=t.user_id
+                WHERE t.enc_id=$1 ORDER BY t.ts ASC`, [encId]),
+    pool.query(`SELECT v.ts, v.user_id, u.name AS "user", v.bp, v.pulse, v.rr, v.spo2, v.gcs, v.temp
+                FROM vitals v LEFT JOIN users u ON u.id=v.user_id
+                WHERE v.enc_id=$1 ORDER BY v.ts ASC`, [encId]),
     pool.query(`SELECT * FROM assessments WHERE enc_id=$1`, [encId]),
-    pool.query(`SELECT ts, user_id, medication, dose, route, notes FROM medications WHERE enc_id=$1 ORDER BY ts ASC`, [encId]),
-    pool.query(`SELECT ts, user_id, type, notes FROM interventions WHERE enc_id=$1 ORDER BY ts ASC`, [encId]),
+    pool.query(`SELECT m.ts, m.user_id, u.name AS "user", m.medication, m.dose, m.route, m.notes
+                FROM medications m LEFT JOIN users u ON u.id=m.user_id
+                WHERE m.enc_id=$1 ORDER BY m.ts ASC`, [encId]),
+    pool.query(`SELECT i.ts, i.user_id, u.name AS "user", i.type, i.notes
+                FROM interventions i LEFT JOIN users u ON u.id=i.user_id
+                WHERE i.enc_id=$1 ORDER BY i.ts ASC`, [encId]),
     pool.query(`SELECT * FROM handover WHERE enc_id=$1`, [encId]),
     pool.query(`SELECT * FROM consent_records WHERE enc_id=$1 ORDER BY ts DESC LIMIT 1`, [encId]),
-    pool.query(`SELECT ts, user_id, role, action, old_value, new_value FROM audit_log WHERE enc_id=$1 ORDER BY ts ASC`, [encId]),
+    pool.query(`SELECT a.ts, a.user_id, u.name AS "user", a.role, a.action, a.old_value, a.new_value
+                FROM audit_log a LEFT JOIN users u ON u.id=a.user_id
+                WHERE a.enc_id=$1 ORDER BY a.ts ASC`, [encId]),
   ]);
 
   const a = assessmentRows[0] || {};
@@ -56,7 +71,7 @@ async function getFullCase(encId) {
     timeline,
     assessment: {
       caseType: c.case_type,
-      airway: a.airway || {}, breathing: a.breathing || {}, circulation: a.circulation || {},
+      x: a.x || {}, airway: a.airway || {}, breathing: a.breathing || {}, circulation: a.circulation || {},
       disability: a.disability || {}, exposure: a.exposure || {},
       stroke: a.stroke || {}, mi: a.mi || {}, trauma: a.trauma || {},
     },
@@ -70,7 +85,7 @@ async function getFullCase(encId) {
       conditionAtHandover: h.condition_at_handover, treatmentProvided: h.treatment_provided,
       provisionalDiagnosis: h.provisional_diagnosis, findings: h.findings, notes: h.notes,
     },
-    summary: { text: c.summary_text, closedBy: c.summary_closed_by, closedAt: c.summary_closed_at },
+    summary: { text: c.summary_text, closedBy: c.summary_closed_by_name, closedAt: c.summary_closed_at },
     auditLog: auditRows,
     updatedAt: c.updated_at,
   };

@@ -4,7 +4,7 @@ import {
   Circle, ChevronRight, ChevronLeft, Search, Plus, LogOut, ShieldCheck,
   Activity, Heart, Brain, Bone, Stethoscope, FileText, QrCode, Wifi, WifiOff,
   RefreshCw, Lock, ClipboardList, Building2, ClipboardCheck, AlertOctagon,
-  Pill, Syringe, Droplet, Save, X, ArrowRight, BadgeCheck, History
+  Pill, Syringe, Droplet, Save, X, ArrowRight, BadgeCheck, History, Download
 } from "lucide-react";
 import "./App.css";
 
@@ -1127,24 +1127,110 @@ function CaseWorkspace({ encId, session, onClose, queuePending }) {
   const [tab, setTab] = useState("overview");
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const saveTimer = useRef(null);
+  const caseRef = useRef(null);
+  const writeQueue = useRef(Promise.resolve());
+  const pendingWrites = useRef(0);
 
   const load = useCallback(async () => {
     const found = await db.getCase(encId, session.token);
+    caseRef.current = found;
     setC(found);
-  }, [encId]);
+  }, [encId, session.token]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    if (session.role === "PARAMEDIC") return undefined;
+    const timer = setInterval(load, 8000);
+    return () => clearInterval(timer);
+  }, [load, session.role]);
 
-  const persist = useCallback(async (updater, auditAction) => {
-    if (!c) return;
+  const persist = useCallback((updater, auditAction) => {
+    if (!caseRef.current) return Promise.resolve();
     setSaveState("saving");
-    const prev = JSON.parse(JSON.stringify(c));
-    const next = JSON.parse(JSON.stringify(c));
+    clearTimeout(saveTimer.current);
+    const prev = JSON.parse(JSON.stringify(caseRef.current));
+    const next = JSON.parse(JSON.stringify(caseRef.current));
+    updater(next);
+    caseRef.current = next;
+    setC(next);
 
-    try { updater(next);
+    const changed = (left, right) => JSON.stringify(left) !== JSON.stringify(right);
+    const write = async () => {
       const handoverChanged = JSON.stringify(prev.handover) !== JSON.stringify(next.handover);
       const summaryChanged = (prev.summary?.text || "") !== (next.summary?.text || "");
       const closing = auditAction === "Case closed" || next.status === STATUS.COMPLETED && prev.status !== STATUS.COMPLETED;
+
+      for (const event of (next.timeline || []).slice((prev.timeline || []).length)) {
+        await apiRequest(`/cases/${encodeURIComponent(next.encId)}/timeline`, {
+          token: session.token,
+          method: "POST",
+          body: JSON.stringify({ eventType: event.type }),
+        });
+      }
+
+      const assessmentSections = ["x", "airway", "breathing", "circulation", "disability", "exposure", "stroke", "mi", "trauma"];
+      if (prev.assessment?.caseType !== next.assessment?.caseType) {
+        await apiRequest(`/cases/${encodeURIComponent(next.encId)}/assessment`, {
+          token: session.token,
+          method: "PATCH",
+          body: JSON.stringify({ caseType: next.assessment.caseType }),
+        });
+      }
+      for (const section of assessmentSections) {
+        if (changed(prev.assessment?.[section] || {}, next.assessment?.[section] || {})) {
+          await apiRequest(`/cases/${encodeURIComponent(next.encId)}/assessment`, {
+            token: session.token,
+            method: "PATCH",
+            body: JSON.stringify({
+              section,
+              patch: next.assessment[section] || {},
+              label: auditAction || `${section.toUpperCase()} charting updated`,
+            }),
+          });
+        }
+      }
+
+      for (const vital of (next.vitals || []).slice((prev.vitals || []).length)) {
+        await apiRequest(`/cases/${encodeURIComponent(next.encId)}/vitals`, {
+          token: session.token,
+          method: "POST",
+          body: JSON.stringify({
+            bp: vital.bp, pulse: vital.pulse, rr: vital.rr,
+            spo2: vital.spo2, gcs: vital.gcs, temp: vital.temp,
+          }),
+        });
+      }
+
+      for (const medication of (next.medications || []).slice((prev.medications || []).length)) {
+        await apiRequest(`/cases/${encodeURIComponent(next.encId)}/medications`, {
+          token: session.token,
+          method: "POST",
+          body: JSON.stringify({
+            medication: medication.medication, dose: medication.dose,
+            route: medication.route, notes: medication.notes,
+          }),
+        });
+      }
+
+      for (const intervention of (next.interventions || []).slice((prev.interventions || []).length)) {
+        await apiRequest(`/cases/${encodeURIComponent(next.encId)}/interventions`, {
+          token: session.token,
+          method: "POST",
+          body: JSON.stringify({ type: intervention.type, notes: intervention.notes }),
+        });
+      }
+
+      if (changed(prev.destination || {}, next.destination || {}) && next.destination?.facility) {
+        await apiRequest(`/cases/${encodeURIComponent(next.encId)}/destination`, {
+          token: session.token,
+          method: "PUT",
+          body: JSON.stringify({
+            facility: next.destination.facility,
+            isAlternative: !!next.destination.isAlternative,
+            consent: next.destination.consent || null,
+          }),
+        });
+      }
 
       if (handoverChanged) {
         await apiRequest(`/cases/${encodeURIComponent(next.encId)}/handover`, {
@@ -1180,21 +1266,37 @@ function CaseWorkspace({ encId, session, onClose, queuePending }) {
           body: JSON.stringify({ summaryText: next.summary.text || "" }),
         });
       }
+    };
 
-      if (auditAction) {
-        next.auditLog = [...(next.auditLog || []), {
-          ts: Date.now(), user: session.name, role: session.role, action: auditAction,
-        }];
+    pendingWrites.current += 1;
+    const task = writeQueue.current.then(write);
+    writeQueue.current = task.catch(() => {});
+
+    task.then(async () => {
+      pendingWrites.current -= 1;
+      if (pendingWrites.current !== 0) return;
+      const synced = await db.getCase(next.encId, session.token);
+      if (synced && pendingWrites.current === 0) {
+        caseRef.current = synced;
+        setC(synced);
       }
-      setC(next);
       setSaveState("saved");
-      clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => setSaveState("idle"), 1800);
-    } catch (err) {
+    }).catch(() => {
+      pendingWrites.current -= 1;
       setSaveState("error");
-      throw err;
-    }
-  }, [c, session]);
+      queuePending?.(auditAction || "Unsynced case update", async () => {
+        await write();
+        const synced = await db.getCase(next.encId, session.token);
+        if (synced) {
+          caseRef.current = synced;
+          setC(synced);
+        }
+      });
+    });
+
+    return task.catch(() => {});
+  }, [queuePending, session.token]);
 
 
   if (!c) {
@@ -1852,7 +1954,7 @@ function MIBlock({ c, persist, readOnly }) {
   const upd = (patch, label) => persist((n) => Object.assign(n.assessment.mi, patch), label);
   return (
     <Section title="Suspected MI — Cardiac Assessment">
-      <Field label="Time of onset"><input type="datetime-local" disabled={readOnly} value={m.onsetTime} onChange={(e) => upd({ onsetTime: e.target.value }, "Chest pain onset")} className="border border-slate-300 rounded-lg px-3 py-2.5 w-full" disabled={readOnly} /></Field>
+      <Field label="Time of onset"><input type="datetime-local" disabled={readOnly} value={m.onsetTime} onChange={(e) => upd({ onsetTime: e.target.value }, "Chest pain onset")} className="border border-slate-300 rounded-lg px-3 py-2.5 w-full" /></Field>
       <Field label="Current symptoms"><TextArea v={m.symptoms} set={(v) => !readOnly && upd({ symptoms: v }, "Cardiac symptoms")} /></Field>
       <Field label="Known cardiac history"><TextArea v={m.cardiacHistory} set={(v) => !readOnly && upd({ cardiacHistory: v }, "Cardiac history")} rows={2} /></Field>
     </Section>
@@ -2213,8 +2315,20 @@ function FakeQR({ seed }) {
 }
 
 function DoctorViewContent({ c }) {
+  const clinicalSections = [
+    ["X", c.assessment?.x],
+    ["Airway", c.assessment?.airway],
+    ["Breathing", c.assessment?.breathing],
+    ["Circulation", c.assessment?.circulation],
+    ["Disability", c.assessment?.disability],
+    ["Exposure", c.assessment?.exposure],
+    ["Stroke", c.assessment?.stroke],
+    ["MI", c.assessment?.mi],
+    ["Trauma", c.assessment?.trauma],
+  ].filter(([, values]) => values && Object.values(values).some((value) => value !== "" && value !== null && value !== undefined && (!Array.isArray(value) || value.length)));
+
   return (
-    <div className="space-y-3 text-sm max-h-[420px] overflow-y-auto pr-1">
+    <div className="space-y-4 text-sm max-h-[620px] overflow-y-auto pr-1">
       <div><span className="text-slate-500">EncID:</span> <span className="font-mono font-semibold">{c.encId}</span></div>
       <div><span className="text-slate-500">Chief complaint:</span> {c.incident.chiefComplaint}</div>
       <div><span className="text-slate-500">Incident location:</span> {c.incident.address}</div>
@@ -2223,8 +2337,35 @@ function DoctorViewContent({ c }) {
         {c.timeline.map((t, i) => <div key={i} className="text-xs">• {TIMELINE_STEPS.find((s) => s.key === t.type)?.label}: {fmtTime(t.ts)}</div>)}
       </div>
       <div>
-        <div className="text-slate-500 mb-1">Latest vitals:</div>
-        {c.vitals.length ? (() => { const v = c.vitals[c.vitals.length - 1]; return <div className="text-xs">BP {v.bp} · Pulse {v.pulse} · RR {v.rr} · SpO2 {v.spo2}% · GCS {v.gcs} · Temp {v.temp}</div>; })() : <div className="text-xs text-slate-400">No vitals recorded</div>}
+        <div className="font-semibold text-slate-700 mb-1">Vitals history</div>
+        {c.vitals.length ? c.vitals.map((v, i) => (
+          <div key={i} className="text-xs border-b border-slate-100 py-1">
+            {fmtTimeShort(v.ts)}: BP {v.bp || "—"} · Pulse {v.pulse || "—"} · RR {v.rr || "—"} · SpO2 {v.spo2 || "—"}% · GCS {v.gcs || "—"} · Temp {v.temp || "—"}
+          </div>
+        )) : <div className="text-xs text-slate-400">No vitals recorded</div>}
+      </div>
+      <div>
+        <div className="font-semibold text-slate-700 mb-1">Clinical charting</div>
+        {clinicalSections.length ? clinicalSections.map(([label, values]) => (
+          <div key={label} className="mb-2 rounded border border-slate-100 p-2">
+            <div className="text-xs font-semibold text-[#0B3D5C] mb-1">{label}</div>
+            {Object.entries(values).filter(([, value]) => value !== "" && value !== null && value !== undefined && (!Array.isArray(value) || value.length)).map(([key, value]) => (
+              <div key={key} className="text-xs"><span className="text-slate-500">{key.replace(/([A-Z])/g, " $1")}:</span> {Array.isArray(value) ? value.join(", ") : String(value)}</div>
+            ))}
+          </div>
+        )) : <div className="text-xs text-slate-400">No clinical charting recorded</div>}
+      </div>
+      <div>
+        <div className="font-semibold text-slate-700 mb-1">Medications</div>
+        {c.medications.length ? c.medications.map((m, i) => (
+          <div key={i} className="text-xs border-b border-slate-100 py-1"><strong>{m.medication}</strong> {m.dose || ""} {m.route || ""}{m.notes ? ` · ${m.notes}` : ""}</div>
+        )) : <div className="text-xs text-slate-400">None recorded</div>}
+      </div>
+      <div>
+        <div className="font-semibold text-slate-700 mb-1">Interventions</div>
+        {c.interventions.length ? c.interventions.map((item, i) => (
+          <div key={i} className="text-xs border-b border-slate-100 py-1"><strong>{item.type}</strong>{item.notes ? ` · ${item.notes}` : ""} <span className="text-slate-400">{fmtTimeShort(item.ts)}</span></div>
+        )) : <div className="text-xs text-slate-400">None recorded</div>}
       </div>
       <div><span className="text-slate-500">Provisional diagnosis:</span> {c.handover?.provisionalDiagnosis || "—"} <span className="text-xs text-amber-600">(not confirmed)</span></div>
       <div><span className="text-slate-500">Pre-hospital summary:</span> {c.summary?.text || "Pending"}</div>
@@ -2236,14 +2377,18 @@ function DoctorViewContent({ c }) {
 /* -------------------------------------- AUDIT TAB --------------------------------- */
 
 function AuditTab({ c }) {
+  const auditRows = c.auditLog || [];
   return (
-    <Section title={`Audit Trail (${c.auditLog.length} entries)`}>
+    <Section title={`Audit Trail (${auditRows.length} entries)`}>
       <div className="divide-y divide-slate-50 text-sm">
-        {[...c.auditLog].reverse().map((a, i) => (
+        {[...auditRows].reverse().map((a, i) => (
           <div key={i} className="py-2 flex justify-between gap-3">
             <div>
               <span className="font-medium">{a.action}</span>
               <div className="text-xs text-slate-400">{a.user} · {ROLES[a.role] || a.role}</div>
+              {a.new_value && (
+                <div className="text-xs text-slate-500 mt-1 break-words">Recorded: {JSON.stringify(a.new_value)}</div>
+              )}
             </div>
             <div className="text-xs text-slate-400 whitespace-nowrap">{fmtTime(a.ts)}</div>
           </div>
@@ -2267,6 +2412,7 @@ function AdminPanel({ session, onOpenCase }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [userForm, setUserForm] = useState({ name: "", phone: "", role: "PARAMEDIC", password: "" });
   const [facilityName, setFacilityName] = useState("");
   const [ambulanceCode, setAmbulanceCode] = useState("");
@@ -2360,6 +2506,34 @@ function AdminPanel({ session, onOpenCase }) {
     } finally { setBusy(false); }
   }
 
+  async function downloadExcel() {
+    setExporting(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/admin/export.xlsx`, {
+        headers: authHeaders(session.token),
+      });
+      if (!response.ok) {
+        let message = `Export failed (${response.status})`;
+        try { message = (await response.json())?.error || message; } catch { /* non-JSON error */ }
+        throw new Error(message);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `lalitpur-ems-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message || "Could not download the Excel export.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (session.role !== "ADMIN") {
     return (
       <Section title="Administrator access required">
@@ -2379,9 +2553,14 @@ function AdminPanel({ session, onOpenCase }) {
           <h1 className="text-2xl font-bold">System Administration</h1>
           <p className="text-sm text-slate-500">Full operational visibility and configuration.</p>
         </div>
-        <button onClick={loadAll} disabled={loading || busy} className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium flex items-center gap-2">
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={downloadExcel} disabled={exporting} className="px-3 py-2 rounded-lg bg-[#0B3D5C] text-white text-sm font-medium flex items-center gap-2">
+            <Download size={15} /> {exporting ? "Preparing Excel…" : "Download Excel"}
+          </button>
+          <button onClick={loadAll} disabled={loading || busy} className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium flex items-center gap-2">
+            <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
+          </button>
+        </div>
       </div>
 
       {error && (

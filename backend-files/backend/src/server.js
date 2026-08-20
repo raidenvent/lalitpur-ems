@@ -12,6 +12,18 @@ const adminRoutes = require("./routes/admin");
 
 const app = express();
 
+// Apply the small, idempotent migration required by older Neon databases.
+// A Vercel redeploy can therefore upgrade the existing prototype database.
+let schemaReady;
+function ensureSchema() {
+  if (!schemaReady) {
+    schemaReady = pool.query(
+      `ALTER TABLE assessments ADD COLUMN IF NOT EXISTS x JSONB NOT NULL DEFAULT '{}'`
+    );
+  }
+  return schemaReady;
+}
+
 app.use(helmet());
 const allowedOrigins = (process.env.CORS_ORIGIN || "").split(",").map(s => s.trim()).filter(Boolean);
 app.use(cors({
@@ -19,6 +31,16 @@ app.use(cors({
 }));
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+
+app.use("/api", async (req, res, next) => {
+  try {
+    await ensureSchema();
+    next();
+  } catch (error) {
+    console.error("[schema] database migration failed", error);
+    res.status(503).json({ error: "Database schema is not ready" });
+  }
+});
 
 // Basic abuse protection on login (brute-force) — tune for real traffic.
 app.use("/api/auth/login", rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }));

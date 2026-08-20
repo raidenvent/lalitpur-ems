@@ -61,50 +61,20 @@ send it as `Authorization: Bearer <token>` on every other call.
 | `GET/POST /api/admin/users` | Admin | User management |
 | `GET/POST /api/admin/facilities`, `/ambulances` | Admin | Config |
 | `GET /api/admin/reports?from=&to=` | Admin | Aggregate stats + response-time metrics (§23) |
+| `GET /api/admin/export.xlsx?from=&to=` | Admin | Multi-sheet Excel export from live database tables |
 
 Every mutating route re-checks the caller's role server-side
 (`requireRole`) — the frontend's role-based UI is a convenience, not the
 security boundary, per §16/§24.
 
-## 5. Point the frontend at this backend
+## 5. Frontend integration
 
-In `lmc-ems.jsx`, the **only** thing that needs to change is the `db`
-object — every UI component already calls `db.getCase`, `db.putCase`,
-`db.getIndex`, etc. Replace the `window.storage`-backed implementations
-with `fetch` calls to this API, e.g.:
-
-```js
-const API = "http://localhost:4000/api";
-let authToken = null; // set after login
-
-async function api(path, opts = {}) {
-  const res = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      ...opts.headers,
-    },
-  });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
-  return res.status === 204 ? null : res.json();
-}
-
-const db = {
-  getCase: (encId) => api(`/cases/${encId}`),
-  getIndex: () => api(`/cases`),
-  // putCase() goes away — replace direct-document overwrites with the
-  // specific mutation endpoints above (postTimeline, patchAssessment,
-  // postVitals, ...), one per user action, matching what the UI already
-  // does semantically. This is also what gives you real audit-log
-  // granularity instead of "case updated".
-};
-```
-
-Also replace the prototype's role-picker `LoginScreen` with a real form
-that posts to `POST /api/auth/login` and stores the returned JWT (e.g. in
-memory + `sessionStorage`, not `localStorage`, to limit token lifetime
-exposure) instead of a free-text name+role.
+The included frontend is already connected to every case mutation endpoint.
+Timeline, XABCDE and special assessment charting, vitals, medications,
+interventions, destination, handover, and summary changes are written to the
+database and recorded in the server audit log. Metro, Receiving Facility, and
+Admin users receive the same clinical case record as a read-only view. Caller
+PII remains removed from the Receiving Facility API response.
 
 ## 6. Hardening before production (not done here — flagging explicitly)
 

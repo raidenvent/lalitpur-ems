@@ -131,6 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_vitals_enc ON vitals(enc_id, ts);
 -- One coherent clinical snapshot per case (see design note above).
 CREATE TABLE IF NOT EXISTS assessments (
   enc_id      TEXT PRIMARY KEY REFERENCES cases(enc_id),
+  x           JSONB NOT NULL DEFAULT '{}',
   airway      JSONB NOT NULL DEFAULT '{}',
   breathing   JSONB NOT NULL DEFAULT '{}',
   circulation JSONB NOT NULL DEFAULT '{}',
@@ -141,6 +142,10 @@ CREATE TABLE IF NOT EXISTS assessments (
   trauma      JSONB NOT NULL DEFAULT '{}',
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Safe migration for databases created before the X (catastrophic
+-- haemorrhage) assessment was added to the frontend.
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS x JSONB NOT NULL DEFAULT '{}';
 
 CREATE TABLE IF NOT EXISTS medications (
   id         SERIAL PRIMARY KEY,

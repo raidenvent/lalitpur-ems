@@ -243,7 +243,7 @@ function blankCase(encId, user) {
     timeline: [],
     assessment: {
       caseType: "medical",
-      exsanguation: {bleeding: "No catastrophic bleeding", intervention: "", bleedingControlled: "", site: "", tourniquetTime: "", remarks: "",},
+      x: {bleeding: "No catastrophic bleeding", intervention: "", bleedingControlled: "", site: "", tourniquetTime: "", remarks: "",},
       airway: { status: "", intervention: "", notes: "" },
       breathing: { rr: "", spo2: "", distress: "", o2: "", intervention: "", notes: "" },
       circulation: { pulse: "", bp: "", capRefill: "", bleeding: "", ivAccess: "", intervention: "", notes: "" },
@@ -1401,117 +1401,117 @@ function ABCDETab({ c, persist, readOnly }) {
   return (
     <div className="space-y-4">
 
-      {/* X — Exsanguination / Catastrophic Hemorrhage */}
-      <Section title="X — Exsanguination / Catastrophic Hemorrhage">
+     <Section title="X — Exsanguination / Catastrophic Hemorrhage">
 
-        <Field label="Bleeding">
-          <RadioRow
-            options={["No catastrophic bleeding", "Catastrophic bleeding"]}
-            v={a.x?.bleeding || ""}
-            set={(v) =>
-              !readOnly &&
-              upd("x", { bleeding: v }, "X — Bleeding")
-            }
-          />
-        </Field>
+  <Field label="Bleeding">
+    <RadioRow
+      options={["No catastrophic bleeding", "Catastrophic bleeding"]}
+      v={a.x?.bleeding || "No catastrophic bleeding"}
+      set={(v) =>
+        !readOnly &&
+        upd("x", { bleeding: v }, "X — Bleeding")
+      }
+    />
+  </Field>
 
-        <Field label="Intervention">
-          <div className="grid sm:grid-cols-2 gap-2">
-            {[
-              "Tourniquet applied",
-              "Direct pressure/compression",
-              "Hemostatic dressing applied",
-              "Wound packing",
-              "Pressure dressing applied",
-              "Other intervention",
-            ].map((item) => {
-              const selected = (a.x?.intervention || "")
-                .split(" | ")
-                .filter(Boolean)
-                .includes(item);
+  <Field label="Intervention">
+    <div className="grid sm:grid-cols-2 gap-2">
+      {[
+        "Tourniquet applied",
+        "Direct pressure/compression",
+        "Hemostatic dressing applied",
+        "Wound packing",
+        "Pressure dressing applied",
+        "Other intervention",
+      ].map((item) => {
+        const selected = (a.x?.intervention || "")
+          .split(" | ")
+          .filter(Boolean)
+          .includes(item);
 
-              return (
-                <label
-                  key={item}
-                  className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    disabled={readOnly}
-                    onChange={(e) => {
-                      const current = (a.x?.intervention || "")
-                        .split(" | ")
-                        .filter(Boolean);
+        return (
+          <label
+            key={item}
+            className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              checked={selected}
+              disabled={readOnly}
+              onChange={(e) => {
+                const current = (a.x?.intervention || "")
+                  .split(" | ")
+                  .filter(Boolean);
 
-                      const next = e.target.checked
-                        ? [...current, item]
-                        : current.filter((x) => x !== item);
+                const next = e.target.checked
+                  ? [...current, item]
+                  : current.filter((x) => x !== item);
 
-                      upd(
-                        "x",
-                        { intervention: next.join(" | ") },
-                        `X intervention: ${item}`
-                      );
-                    }}
-                  />
-                  {item}
-                </label>
-              );
-            })}
-          </div>
-        </Field>
-
-        <Grid2>
-          <Field label="Bleeding controlled">
-            <RadioRow
-              options={["Yes", "No"]}
-              v={a.x?.bleedingControlled || ""}
-              set={(v) =>
-                !readOnly &&
                 upd(
                   "x",
-                  { bleedingControlled: v },
-                  "Bleeding controlled"
-                )
-              }
+                  { intervention: next.join(" | ") },
+                  `X intervention: ${item}`
+                );
+              }}
             />
-          </Field>
+            <span>{item}</span>
+          </label>
+        );
+      })}
+    </div>
+  </Field>
 
-          <Field label="Site">
-            <TextInput
-              v={a.x?.site || ""}
-              set={(v) =>
-                !readOnly &&
-                upd("x", { site: v }, "Bleeding site")
-              }
-            />
-          </Field>
-        </Grid2>
+  <Grid2>
+    <Field label="Bleeding controlled">
+      <RadioRow
+        options={["Yes", "No"]}
+        v={a.x?.bleedingControlled || ""}
+        set={(v) =>
+          !readOnly &&
+          upd(
+            "x",
+            { bleedingControlled: v },
+            "Bleeding controlled"
+          )
+        }
+      />
+    </Field>
 
-        <Grid2>
-          <Field label="Tourniquet time">
-            <TextInput
-              v={a.x?.tourniquetTime || ""}
-              set={(v) =>
-                !readOnly &&
-                upd("x", { tourniquetTime: v }, "Tourniquet time")
-              }
-            />
-          </Field>
+    <Field label="Site">
+      <TextInput
+        v={a.x?.site || ""}
+        set={(v) =>
+          !readOnly &&
+          upd("x", { site: v }, "Bleeding site")
+        }
+      />
+    </Field>
+  </Grid2>
 
-          <Field label="Intervention details/remarks">
-            <TextArea
-              v={a.x?.remarks || ""}
-              set={(v) =>
-                !readOnly &&
-                upd("x", { remarks: v }, "X intervention remarks")
-              }
-              rows={2}
-            />
-          </Field>
-        </Grid2>
+  <Grid2>
+    <Field label="Tourniquet time">
+      <TextInput
+        v={a.x?.tourniquetTime || ""}
+        set={(v) =>
+          !readOnly &&
+          upd("x", { tourniquetTime: v }, "Tourniquet time")
+        }
+      />
+    </Field>
 
+    <Field label="Intervention details/remarks">
+      <TextArea
+        v={a.x?.remarks || ""}
+        set={(v) =>
+          !readOnly &&
+          upd("x", { remarks: v }, "X intervention remarks")
+        }
+        rows={2}
+      />
+    </Field>
+  </Grid2>
+
+</Section>
       </Section>
 
       {/* A — Airway */}

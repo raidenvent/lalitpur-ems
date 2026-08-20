@@ -1140,9 +1140,8 @@ function CaseWorkspace({ encId, session, onClose, queuePending }) {
     setSaveState("saving");
     const prev = JSON.parse(JSON.stringify(c));
     const next = JSON.parse(JSON.stringify(c));
-    updater(next);
 
-    try {
+    try { updater(next);
       const handoverChanged = JSON.stringify(prev.handover) !== JSON.stringify(next.handover);
       const summaryChanged = (prev.summary?.text || "") !== (next.summary?.text || "");
       const closing = auditAction === "Case closed" || next.status === STATUS.COMPLETED && prev.status !== STATUS.COMPLETED;
@@ -1394,9 +1393,12 @@ function TimelineTab({ c, persist, readOnly, session }) {
 function ABCDETab({ c, persist, readOnly }) {
   const a = c.assessment;
   const upd = (section, patch, label) =>
-    persist((n) => {
-      Object.assign(n.assessment[section], patch);
-    }, `${label} updated`);
+  persist((n) => {
+    n.assessment[section] = {
+      ...(n.assessment[section] || {}),
+      ...patch,
+    };
+  }, `${label} updated`);
 
   return (
     <div className="space-y-4">
